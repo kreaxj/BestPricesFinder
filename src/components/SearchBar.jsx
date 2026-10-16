@@ -8,24 +8,25 @@ export function SearchBar({ onResults }) {
   const debouncedQuery = useDebounce(query, 450)
 
   useEffect(() => {
-    if (debouncedQuery.length < 2) return
+  if (debouncedQuery.length < 2) {
+    onResults(null, '');
+    return;
+  }
 
-    let cancelled = false
-    setLoading(true)
+  let cancelled = false;
+  setLoading(true);
 
-    fetchDeals({ title: debouncedQuery, pageSize: 60 })
-      .then((deals) => {
-        if (!cancelled) onResults(deals)
-      })
-      .catch((err) => {
-        console.error('Ошибка поиска:', err)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+  fetchDeals({ title: debouncedQuery, pageSize: 60, onSale: 1 })
+    .then((deals) => {
+      if (!cancelled) onResults(deals, debouncedQuery);
+    })
+    .catch((err) => console.error('Ошибка поиска:', err))
+    .finally(() => {
+      if (!cancelled) setLoading(false);
+    });
 
-    return () => { cancelled = true; }
-  }, [debouncedQuery, onResults])
+  return () => { cancelled = true; };
+}, [debouncedQuery, onResults]);
 
   return (
     <div className="relative w-full max-w-xl">

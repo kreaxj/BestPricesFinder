@@ -1,17 +1,16 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
 const links = [
-  { to: '/', label: 'Поиск', icon: '🔍' },
-  { to: '/analytics', label: 'Аналитика', icon: '📊' },
+  { to: '/', label: 'Поиск'},
+  { to: '/analytics', label: 'Аналитика'},
 ]
 
 export function Layout() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Верхняя навигация (десктоп) */}
       <header className="hidden border-b bg-white sm:block">
         <nav className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
-          <span className="text-lg font-bold">Best Prices Finder</span>
+          <span className="text-lg font-bold text-black">Best Prices Finder</span>
           {links.map((l) => (
             <NavLink
               key={l.to}
@@ -32,7 +31,6 @@ export function Layout() {
         <Outlet />
       </main>
 
-      {/* Нижняя навигация (мобильные) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t bg-white sm:hidden">
         {links.map((l) => (
           <NavLink

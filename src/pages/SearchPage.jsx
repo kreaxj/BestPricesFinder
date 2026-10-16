@@ -1,108 +1,221 @@
-import { useState, useCallback, useEffect } from 'react'
-import { SearchBar } from '../components/SearchBar'
-import { SortControls } from '../components/SortControls'
-import { GameCard } from '../components/GameCard'
-import { fetchDeals } from '../api/cheapshark'
+import { useState, useCallback, useEffect } from 'react';
+import { SearchBar } from '../components/SearchBar';
+import { SortControls } from '../components/SortControls';
+import { GameCard } from '../components/GameCard';
+import { Pagination } from '../components/Pagination';
+import { fetchDeals } from '../api/cheapshark';
+import { useStores } from '../hooks/useStores';
+
+const PAGE_SIZE = 24;
+
+const RATING_RANK = {
+  'Overwhelmingly Positive': 8,
+  'Very Positive': 7,
+  'Positive': 6,
+  'Mostly Positive': 5,
+  'Mixed': 4,
+  'Mostly Negative': 3,
+  'Negative': 2,
+  'Overwhelmingly Negative': 1,
+};
+
+function rankSteamRating(deal) {
+  const pct = parseFloat(deal.steamRatingPercent);
+  if (!Number.isFinite(pct) || pct <= 0) return -1;
+  return RATING_RANK[deal.steamRatingText] || 0;
+}
+
+function toServerSort(sortKey, desc) {
+  const dir = desc ? 1 : 0;
+  if (sortKey === 'Price') return { sortBy: 'Price', desc: dir };
+  if (sortKey === 'Metacritic') return { sortBy: 'Metacritic', desc: dir };
+  if (sortKey === 'Release') return { sortBy: 'Release', desc: dir };
+  if (sortKey === 'SteamRating') return { sortBy: 'DealRating', desc: 1 };
+  return { sortBy: 'Price', desc: 0 };
+}
 
 export function SearchPage() {
-  const [deals, setDeals] = useState([])
-  const [sortBy, setSortBy] = useState('DealRating')
-  const [desc, setDesc] = useState(true)
-  const [loading, setLoading] = useState(true)
-  const [isSearchResult, setIsSearchResult] = useState(false)
+  const [deals, setDeals] = useState([]);
+  const [sortBy, setSortBy] = useState('Price');
+  const [desc, setDesc] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isSearchResult, setIsSearchResult] = useState(false);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Загружаем популярные скидки при первом рендере
+  const storeMap = useStores();
+
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
+    if (isSearchResult) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    const server = toServerSort(sortBy, desc);
 
     fetchDeals({
-      sortBy: 'DealRating',
-      desc: true,
-      pageSize: 24,
-      onSale: true,
-      lowerPrice: 0,
-      upperPrice: 50,
+      sortBy: server.sortBy,
+      desc: server.desc,
+      pageNumber: page - 1,
+      pageSize: PAGE_SIZE,
+      onSale: 1,
     })
       .then((data) => {
-        if (!cancelled) {
-          setDeals(data)
-          setIsSearchResult(false)
+        if (cancelled) return;
+        if (data.length === 0 && page > 1) {
+          setPage((p) => Math.max(1, p - 1));
+          return;
+        }
+        setDeals(data);
+        setHasNext(data.length === PAGE_SIZE);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.response?.status === 429) {
+          setError(
+            'Слишком много запросов к CheapShark. Подождите минуту и обновите страницу.',
+          );
+        } else {
+          setError('Не удалось загрузить игры. Проверьте соединение.');
         }
       })
-      .catch((err) => console.error('Ошибка загрузки популярных скидок:', err))
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
 
-    return () => { cancelled = true; };
-  }, [])
+    return () => {
+      cancelled = true;
+    };
+  }, [page, sortBy, desc, isSearchResult]);
 
-  const sorted = [...deals].sort((a, b) => {
-    let cmp = 0
-    switch (sortBy) {
-      case 'Price':
-        cmp = parseFloat(a.salePrice) - parseFloat(b.salePrice)
-        break
-      case 'DealRating':
-        cmp = parseFloat(b.savings) - parseFloat(a.savings)
-        break
-      case 'Release':
-        cmp = a.releaseDate - b.releaseDate
-        break
-      case 'Metacritic':
-        cmp =
-          (parseInt(b.metacriticScore) || 0) -
-          (parseInt(a.metacriticScore) || 0)
-        break
-      default:
-        break
+  const handleResults = useCallback((newDeals, query) => {
+    if (newDeals === null) {
+      setIsSearchResult(false);
+      setSearchQuery('');
+      setPage(1);
+      return;
     }
-    return desc ? -cmp : cmp
-  })
 
-  const handleResults = useCallback((newDeals) => {
+    setSearchQuery(query || '');
     setDeals(newDeals);
     setIsSearchResult(true);
-  }, [])
+    setPage(1);
+    setHasNext(false);
+  }, []);
+
+  const handleSortChange = (s, d) => {
+    if (s === sortBy && d === desc) return;
+    setSortBy(s);
+    setDesc(d);
+    setPage(1);
+  };
+
+  const sorted = [...deals].sort((a, b) => {
+    const needsClientSort = isSearchResult || sortBy === 'SteamRating';
+    if (!needsClientSort) return 0;
+
+    let aVal = null;
+    let bVal = null;
+
+    switch (sortBy) {
+      case 'Price':
+        aVal = parseFloat(a.salePrice);
+        bVal = parseFloat(b.salePrice);
+        break;
+      case 'SteamRating': {
+        const aR = rankSteamRating(a);
+        const bR = rankSteamRating(b);
+        aVal = aR > 0 ? aR : null;
+        bVal = bR > 0 ? bR : null;
+        break;
+      }
+      case 'Release':
+        aVal = parseInt(a.releaseDate) || null;
+        bVal = parseInt(b.releaseDate) || null;
+        break;
+      case 'Metacritic':
+        aVal = parseInt(a.metacriticScore) || null;
+        bVal = parseInt(b.metacriticScore) || null;
+        break;
+      default:
+        return 0;
+    }
+
+    if (aVal === null && bVal === null) return 0;
+    if (aVal === null) return 1;
+    if (bVal === null) return -1;
+
+    const cmp = aVal - bVal;
+    return desc ? -cmp : cmp;
+  });
+
+  useEffect(() => {
+    if (!isSearchResult && page > 1) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [page, isSearchResult]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <SearchBar onResults={handleResults} />
+      <div className="flex justify-center">
+        <SearchBar onResults={handleResults} />
+      </div>
 
       <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">
           {isSearchResult
-            ? `Найдено: ${deals.length} предложений`
-            : `🔥 Популярные скидки (${deals.length})`}
+            ? searchQuery
+              ? `Найдено по запросу «${searchQuery}»: ${deals.length}`
+              : `Найдено: ${deals.length} предложений`
+            : `Топ скидок — страница ${page}`}
         </p>
-        <SortControls
-          value={sortBy}
-          desc={desc}
-          onChange={(s, d) => {
-            setSortBy(s);
-            setDesc(d);
-          }}
-        />
+        <SortControls value={sortBy} desc={desc} onChange={handleSortChange} />
       </div>
 
-      {loading ? (
+      {loading && !isSearchResult ? (
         <div className="mt-16 flex justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
         </div>
+      ) : error ? (
+        <div className="mt-16 text-center">
+          <p className="text-gray-500">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Повторить
+          </button>
+        </div>
       ) : sorted.length === 0 ? (
         <p className="mt-16 text-center text-gray-400">
-          {isSearchResult
-            ? 'Ничего не найдено. Попробуйте другой запрос.'
-            : 'Не удалось загрузить скидки. Проверьте соединение.'}
+          {isSearchResult && searchQuery
+            ? `По запросу «${searchQuery}» ничего не найдено. Попробуйте другой запрос.`
+            : 'Не удалось загрузить скидки.'}
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sorted.map((deal) => (
-            <GameCard key={deal.dealID} deal={deal} />
-          ))}
-        </div>
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sorted.map((deal) => (
+              <GameCard
+                key={deal.dealID}
+                deal={deal}
+                store={storeMap[deal.storeID]}
+              />
+            ))}
+          </div>
+
+          {!isSearchResult && (
+            <Pagination
+              page={page}
+              hasNext={hasNext}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => p + 1)}
+            />
+          )}
+        </>
       )}
     </div>
-  )
+  );
 }
