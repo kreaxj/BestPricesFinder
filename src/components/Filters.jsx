@@ -6,7 +6,7 @@ export function Filters({ filters, onChange, onReset }) {
   const hasActive =
     !filters.onSale ||
     filters.lowerPrice > 0 ||
-    filters.upperPrice < 100 ||
+    filters.upperPrice < 1000 ||
     filters.steamRating > 0;
 
   return (
@@ -27,23 +27,25 @@ export function Filters({ filters, onChange, onReset }) {
           <input
             type="number"
             min="0"
-            max="100"
+            max="1000"
             value={filters.lowerPrice}
             onChange={(e) =>
               handleChange({ lowerPrice: Number(e.target.value) || 0 })
             }
-            className="w-14 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onFocus={(e) => e.target.select()}
+            className="w-20 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <span className="text-gray-400">—</span>
           <input
             type="number"
             min="0"
-            max="100"
+            max="1000"
             value={filters.upperPrice}
             onChange={(e) =>
               handleChange({ upperPrice: Number(e.target.value) || 0 })
             }
-            className="w-14 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onFocus={(e) => e.target.select()}
+            className="w-20 rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <span className="text-gray-400">$</span>
         </div>

@@ -22,7 +22,7 @@ const RATING_RANK = {
 const DEFAULT_FILTERS = {
   onSale: true,
   lowerPrice: 0,
-  upperPrice: 100,
+  upperPrice: 1000,
   steamRating: 0,
 };
 
@@ -71,11 +71,11 @@ export function SearchPage() {
       desc: server.desc,
       pageNumber: page - 1,
       pageSize: PAGE_SIZE,
+      upperPrice: filters.upperPrice,
     };
 
     if (filters.onSale) params.onSale = 1;
     if (filters.lowerPrice > 0) params.lowerPrice = filters.lowerPrice;
-    if (filters.upperPrice < 100) params.upperPrice = filters.upperPrice;
     if (filters.steamRating > 0) params.steamRating = filters.steamRating;
 
     fetchDeals(params)
@@ -129,7 +129,14 @@ export function SearchPage() {
     setPage(1);
   };
 
-  const handleFiltersChange = (newFilters) => {
+    const handleFiltersChange = (newFilters) => {
+    if (newFilters.lowerPrice > newFilters.upperPrice) {
+      if (newFilters.lowerPrice !== filters.lowerPrice) {
+        newFilters.upperPrice = 1000;
+      } else {
+        newFilters.lowerPrice = newFilters.upperPrice;
+      }
+    }
     setFilters(newFilters);
     setPage(1);
   };
