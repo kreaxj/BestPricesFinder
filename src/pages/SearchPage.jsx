@@ -5,8 +5,7 @@ import { GameCard } from '../components/GameCard';
 import { Pagination } from '../components/Pagination';
 import { fetchDeals } from '../api/cheapshark';
 import { useStores } from '../hooks/useStores';
-
-const PAGE_SIZE = 24;
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const RATING_RANK = {
   'Overwhelmingly Positive': 8,
@@ -35,6 +34,9 @@ function toServerSort(sortKey, desc) {
 }
 
 export function SearchPage() {
+  const isMobile = useIsMobile();
+  const PAGE_SIZE = isMobile ? 12 : 24;
+
   const [deals, setDeals] = useState([]);
   const [sortBy, setSortBy] = useState('Price');
   const [desc, setDesc] = useState(false);
@@ -88,7 +90,7 @@ export function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, sortBy, desc, isSearchResult]);
+  }, [page, sortBy, desc, isSearchResult, PAGE_SIZE]);
 
   const handleResults = useCallback((newDeals, query) => {
     if (newDeals === null) {
@@ -169,7 +171,7 @@ export function SearchPage() {
             ? searchQuery
               ? `Найдено по запросу «${searchQuery}»: ${deals.length}`
               : `Найдено: ${deals.length} предложений`
-            : `Топ скидок - страница ${page}`}
+            : `Топ скидок — страница ${page}`}
         </p>
         <SortControls value={sortBy} desc={desc} onChange={handleSortChange} />
       </div>
