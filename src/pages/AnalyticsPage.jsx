@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchDeals, fetchStores } from '../api/cheapshark';
 import { PriceDistributionChart, SavingsByStoreChart } from '../components/DealChart';
 
-const PAGES = 8; // 8 × 60 = 480 сделок
+const PAGES = 2;
 
 export function AnalyticsPage() {
   const [deals, setDeals] = useState([]);
@@ -30,7 +30,6 @@ export function AnalyticsPage() {
 
         if (cancelled) return;
 
-        // Убираем дубликаты по dealID
         const seen = new Set();
         const all = pages.flat().filter((d) => {
           if (seen.has(d.dealID)) return false;
@@ -59,9 +58,9 @@ export function AnalyticsPage() {
   if (error) return <p className="p-8 text-center text-red-600">Ошибка: {error}</p>;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <h1 className="mb-1 text-2xl font-bold text-gray-900">Аналитика скидок</h1>
-      <p className="mb-6 text-sm text-gray-500">
+    <div className="mb-6 flex-col items-center gap-6">
+      <h1 className="m-0 text-2xl font-bold">Аналитика скидок</h1>
+      <p className="m-0 text-sm text-gray-500">
         По выборке из {deals.length} текущих скидок
       </p>
 
@@ -81,7 +80,7 @@ export function AnalyticsPage() {
             Средние скидки по магазинам
           </h2>
           <p className="mb-3 text-xs text-gray-500">
-            Сортировка по средней скидке — сверху самые щедрые
+            Сортировка по средней скидке
           </p>
           <SavingsByStoreChart deals={deals} storeMap={storeMap} />
         </div>

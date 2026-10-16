@@ -169,7 +169,7 @@ export function SearchPage() {
             ? searchQuery
               ? `Найдено по запросу «${searchQuery}»: ${deals.length}`
               : `Найдено: ${deals.length} предложений`
-            : `Топ скидок — страница ${page}`}
+            : `Топ скидок - страница ${page}`}
         </p>
         <SortControls value={sortBy} desc={desc} onChange={handleSortChange} />
       </div>

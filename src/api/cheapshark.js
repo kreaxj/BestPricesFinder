@@ -4,9 +4,6 @@ const BASE_URL = 'https://www.cheapshark.com/api/1.0'
 
 const api = axios.create({
     baseURL: BASE_URL,
-    headers: {
-        'User-Agent': 'BestPricesFinder/1.0 (danil.adamencko2017@yandex.ru)',
-    },
 })
 
 /**

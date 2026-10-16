@@ -13,6 +13,12 @@ export function SearchBar({ onResults }) {
     return;
   }
 
+  const hasLatin = /[a-zA-Z]/.test(debouncedQuery);
+  if (!hasLatin) {
+    onResults([], debouncedQuery);
+    return;
+  }
+
   let cancelled = false;
   setLoading(true);
 
@@ -20,13 +26,17 @@ export function SearchBar({ onResults }) {
     .then((deals) => {
       if (!cancelled) onResults(deals, debouncedQuery);
     })
-    .catch((err) => console.error('Ошибка поиска:', err))
+    .catch((err) => {
+      if (cancelled) return;
+      console.error('Ошибка поиска:', err);
+      onResults([], debouncedQuery);
+    })
     .finally(() => {
       if (!cancelled) setLoading(false);
     });
 
-  return () => { cancelled = true; };
-}, [debouncedQuery, onResults]);
+    return () => { cancelled = true; };
+  }, [debouncedQuery, onResults]);
 
   return (
     <div className="relative w-full max-w-xl">

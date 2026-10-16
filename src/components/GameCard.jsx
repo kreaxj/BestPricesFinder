@@ -57,17 +57,22 @@ export function GameCard({ deal, store }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          {deal.metacriticScore && (
-            <span className="rounded bg-gray-100 px-1.5 py-0.5">
-              Metacritic: {deal.metacriticScore}
+        <div className="flex flex-col gap-1 text-xs text-black-500">
+          {deal.steamRatingText && (
+            <span>
+              Steam: <span className="text-black-700">{deal.steamRatingText}</span>
             </span>
           )}
-          {deal.steamRatingText && <span>{deal.steamRatingText}</span>}
+          {deal.metacriticScore && (
+            <span>
+              Metacritic:{' '}
+              <span className="text-black-700">{deal.metacriticScore}</span>
+            </span>
+          )}
         </div>
 
         {releaseDate && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-black-400">
           Дата выхода: {releaseDate}
         </p>
       )}
