@@ -3,6 +3,7 @@ import { SearchBar } from '../components/SearchBar';
 import { SortControls } from '../components/SortControls';
 import { GameCard } from '../components/GameCard';
 import { Pagination } from '../components/Pagination';
+import { Filters } from '../components/Filters';
 import { fetchDeals } from '../api/cheapshark';
 import { useStores } from '../hooks/useStores';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -16,6 +17,13 @@ const RATING_RANK = {
   'Mostly Negative': 3,
   'Negative': 2,
   'Overwhelmingly Negative': 1,
+};
+
+const DEFAULT_FILTERS = {
+  onSale: true,
+  lowerPrice: 0,
+  upperPrice: 100,
+  steamRating: 0,
 };
 
 function rankSteamRating(deal) {
@@ -46,6 +54,7 @@ export function SearchPage() {
   const [isSearchResult, setIsSearchResult] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
   const storeMap = useStores();
 
@@ -57,13 +66,19 @@ export function SearchPage() {
 
     const server = toServerSort(sortBy, desc);
 
-    fetchDeals({
+    const params = {
       sortBy: server.sortBy,
       desc: server.desc,
       pageNumber: page - 1,
       pageSize: PAGE_SIZE,
-      onSale: 1,
-    })
+    };
+
+    if (filters.onSale) params.onSale = 1;
+    if (filters.lowerPrice > 0) params.lowerPrice = filters.lowerPrice;
+    if (filters.upperPrice < 100) params.upperPrice = filters.upperPrice;
+    if (filters.steamRating > 0) params.steamRating = filters.steamRating;
+
+    fetchDeals(params)
       .then((data) => {
         if (cancelled) return;
         if (data.length === 0 && page > 1) {
@@ -90,7 +105,7 @@ export function SearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, sortBy, desc, isSearchResult, PAGE_SIZE]);
+  }, [page, sortBy, desc, isSearchResult, PAGE_SIZE, filters]);
 
   const handleResults = useCallback((newDeals, query) => {
     if (newDeals === null) {
@@ -111,6 +126,16 @@ export function SearchPage() {
     if (s === sortBy && d === desc) return;
     setSortBy(s);
     setDesc(d);
+    setPage(1);
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+  };
+
+  const handleFiltersReset = () => {
+    setFilters(DEFAULT_FILTERS);
     setPage(1);
   };
 
@@ -165,13 +190,19 @@ export function SearchPage() {
         <SearchBar onResults={handleResults} />
       </div>
 
+      <Filters
+        filters={filters}
+        onChange={handleFiltersChange}
+        onReset={handleFiltersReset}
+      />
+
       <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-500">
           {isSearchResult
             ? searchQuery
               ? `Найдено по запросу «${searchQuery}»: ${deals.length}`
               : `Найдено: ${deals.length} предложений`
-            : `Топ скидок — страница ${page}`}
+            : `Топ скидок - страница ${page}`}
         </p>
         <SortControls value={sortBy} desc={desc} onChange={handleSortChange} />
       </div>
